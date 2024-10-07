@@ -14,3 +14,27 @@ jobs:
         password: ${{ secrets.DOCKERHUB_TOKEN }}
         repository: ${{ secrets.DOCKERHUB_USERNAME }}/gitops-maps
         tags: ${{github.sha}}, latest
+
+    - name: Setup Kustomize
+      uses: imranismail/setup-kustomize@v1
+      with:
+        kustomize-version: 'v3.6.1'
+
+    - name: Update Kubernetes resources
+      env:
+        DOCKER_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+      run: |
+        cd k8s
+        kustomize edit set image geobee-maps-backend=$DOCKER_USERNAME/gitops-maps:${{github.sha}}
+
+    - name: Commit
+      run: |
+        git config --global user.email "action@github.com"
+        git config --global user.name "GitHub Action"
+        git commit -am "Bump docker version"
+
+    - name: Push
+      uses: ad-m/github-push-action@master
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        repository: 'GeoBEEAM/geomaps'
