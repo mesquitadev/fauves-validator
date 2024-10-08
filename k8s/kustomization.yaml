@@ -2,10 +2,10 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
 resources:
-  - "deployment.yaml"
-  - "service.yaml"
+- deployment.yaml
+- service.yaml
 
 images:
-  - name: geobee-maps-backend
-    newName: mesquitadev/gitops-maps
-    newTag: sha
+- name: geobee-maps-backend
+  newName: mesquitadev/gitops-maps
+  newTag: 0ece73bcb9a47cd2f52617d97b64c117511f77db
