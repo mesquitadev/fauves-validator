@@ -1,0 +1,12 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+- deployment.yaml
+- service.yaml
+- ingress.yaml
+
+images:
+- name: geobee-maps-backend
+  newName: mesquitadev/gitops-maps
+  newTag: 81ae7925a6acbdc2955d6afd22845ec991911b43
