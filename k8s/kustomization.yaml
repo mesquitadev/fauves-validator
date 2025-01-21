@@ -9,4 +9,4 @@ resources:
 images:
 - name: geobee-maps-backend
   newName: mesquitadev/gitops-maps
-  newTag: 81ae7925a6acbdc2955d6afd22845ec991911b43
+  newTag: c261348d7011928485b5a67b11128e77441cc6ec
