@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, status, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
-from core.deps import get_session
+from core.deps import get_session, get_current_user
 from core.security import generate_password_hash
 from models import User
 from schemas.user_schema import UserSchema, CreateUserSchema
@@ -43,3 +43,7 @@ async def create_user(
     await session.commit()
     await session.refresh(new_user)
     return new_user
+
+@user_router.get('/me', response_model=UserSchema)
+async def get_logged_in_user(current_user: User = Depends(get_current_user)):
+    return current_user

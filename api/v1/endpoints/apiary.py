@@ -5,79 +5,84 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
 from core.deps import get_session, get_current_user
-from models import User
+from models import User, Apiary
 from models.meliponary import Meliponary
+from schemas.apiary_schema import ApiaryCreateSchema, ApiarySchema
 from schemas.meliponary_schema import MeliponaryCreateSchema, MeliponarySchema
-from utils import verify_user_exists
+from utils import verify_user_exists, process_geojson
 
-meliponary_router = APIRouter()
+apiary_router = APIRouter()
 
 
-@meliponary_router.post('/', response_model=MeliponaryCreateSchema, status_code=status.HTTP_201_CREATED)
+@apiary_router.post('/', response_model=ApiarySchema, status_code=status.HTTP_201_CREATED)
 async def create_meliponary(
-        meliponary: MeliponaryCreateSchema,
+        apiary: ApiaryCreateSchema,
         auth_user: User = Depends(get_current_user),
         session: AsyncSession = Depends(get_session)
 ):
-    await verify_user_exists(meliponary.userId, session)
-    new_meliponary = Meliponary(name=meliponary.name,
-                                latitude=meliponary.latitude,
-                                longitude=meliponary.longitude,
-                                tipoInstalacao=meliponary.tipoInstalacao,
-                                especieAbelha=meliponary.especieAbelha,
-                                quantidadeColmeias=meliponary.quantidadeColmeias,
-                                outrosMeliponariosRaio1km=meliponary.outrosMeliponariosRaio1km,
-                                qtdColmeiasOutrosMeliponarios=meliponary.qtdColmeiasOutrosMeliponarios,
-                                fontesNectarPolen=meliponary.fontesNectarPolen,
-                                disponibilidadeAgua=meliponary.disponibilidadeAgua,
-                                sombreamentoNatural=meliponary.sombreamentoNatural,
-                                protecaoVentosFortes=meliponary.protecaoVentosFortes,
-                                distanciaSeguraContaminacao=meliponary.distanciaSeguraContaminacao,
-                                distanciaMinimaConstrucoes=meliponary.distanciaMinimaConstrucoes,
-                                distanciaSeguraLavouras=meliponary.distanciaSeguraLavouras,
-                                capacidadeDeSuporte=meliponary.capacidadeDeSuporte,
-                                userId=auth_user.id
-                                )
-    session.add(new_meliponary)
+    await verify_user_exists(auth_user.id, session)
+    suporte = await process_geojson(apiary.latitude, apiary.longitude, auth_user.role, )
+    capacidade_de_suporte = suporte - apiary.qtdColmeiasOutrosApiarios if apiary.qtdColmeiasOutrosApiarios else suporte
+    new_apiary = Apiary(
+        name=apiary.name,
+        latitude=apiary.latitude,
+        longitude=apiary.longitude,
+        tipoInstalacao=apiary.tipoInstalacao,
+        tempoItinerante=apiary.tempoItinerante,
+        quantidadeColmeias=apiary.quantidadeColmeias,
+        outrosApiariosRaio3km=apiary.outrosApiariosRaio3km,
+        qtdColmeiasOutrosApiarios=apiary.qtdColmeiasOutrosApiarios,
+        fontesNectarPolen=apiary.fontesNectarPolen,
+        disponibilidadeAgua=apiary.disponibilidadeAgua,
+        sombreamentoNatural=apiary.sombreamentoNatural,
+        protecaoVentosFortes=apiary.protecaoVentosFortes,
+        distanciaSeguraContaminacao=apiary.distanciaSeguraContaminacao,
+        distanciaMinimaConstrucoes=apiary.distanciaMinimaConstrucoes,
+        distanciaSeguraLavouras=apiary.distanciaSeguraLavouras,
+        acessoVeiculos=apiary.acessoVeiculos,
+        capacidadeDeSuporte=str(capacidade_de_suporte),
+        userId=auth_user.id
+    )
+    session.add(new_apiary)
     await session.commit()
-    await session.refresh(new_meliponary)
-    return new_meliponary
+    await session.refresh(new_apiary)
+    return new_apiary
 
 
-@meliponary_router.get('/', response_model=List[MeliponarySchema])
-async def get_meliponaries(session: AsyncSession = Depends(get_session), auth_user: User = Depends(get_current_user),):
-    result = await session.execute(select(Meliponary))
+@apiary_router.get('/', response_model=List[ApiarySchema])
+async def get_apiaries(session: AsyncSession = Depends(get_session), auth_user: User = Depends(get_current_user),):
+    result = await session.execute(select(Apiary))
     return result.scalars().all()
 
 
-@meliponary_router.get('/{id}', response_model=MeliponarySchema)
-async def get_meliponary(id: int, session: AsyncSession = Depends(get_session), auth_user: User = Depends(get_current_user),):
-    result = await session.execute(select(Meliponary).filter(Meliponary.id == id))
+@apiary_router.get('/{id}', response_model=ApiarySchema)
+async def get_apiary(id: int, session: AsyncSession = Depends(get_session), auth_user: User = Depends(get_current_user),):
+    result = await session.execute(select(Apiary).filter(Apiary.id == id))
     meliponary = result.scalar()
     if meliponary is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Meliponary not found')
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Apiary not found')
     return meliponary
 
 
-@meliponary_router.put('/{id}', response_model=MeliponaryCreateSchema)
-async def update_meliponary(id: int, meliponary: MeliponaryCreateSchema, session: AsyncSession = Depends(get_session), auth_user: User = Depends(get_current_user),):
-    await verify_user_exists(meliponary.userId, session)
-    result = await session.execute(select(Meliponary).filter(Meliponary.id == id))
-    meliponary_db = result.scalar()
-    if meliponary_db is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Meliponary not found')
-    meliponary_db.update(**meliponary.model_dump())
+@apiary_router.put('/{id}', response_model=ApiaryCreateSchema)
+async def update_apiary(id: int, apiary: ApiaryCreateSchema, session: AsyncSession = Depends(get_session), auth_user: User = Depends(get_current_user), ):
+    await verify_user_exists(apiary.userId, session)
+    result = await session.execute(select(Apiary).filter(Apiary.id == id))
+    apiary_db = result.scalar()
+    if apiary_db is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Apiary not found')
+    apiary_db.update(**apiary.model_dump())
     await session.commit()
-    await session.refresh(meliponary_db)
-    return meliponary_db
+    await session.refresh(apiary_db)
+    return apiary_db
 
 
-@meliponary_router.delete('/{id}', status_code=status.HTTP_204_NO_CONTENT)
+@apiary_router.delete('/{id}', status_code=status.HTTP_204_NO_CONTENT)
 async def delete_meliponary(id: int, session: AsyncSession = Depends(get_session), auth_user: User = Depends(get_current_user),):
-    result = await session.execute(select(Meliponary).filter(Meliponary.id == id))
-    meliponary = result.scalar_one_or_none()
-    if meliponary is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Meliponary not found')
-    session.delete(meliponary)
+    result = await session.execute(select(Apiary).filter(Apiary.id == id))
+    apiary = result.scalar_one_or_none()
+    if apiary is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Apiary not found')
+    await session.delete(apiary)
     await session.commit()
     return Response(status_code=status.HTTP_204_NO_CONTENT)

@@ -1,3 +1,4 @@
+import logging
 from typing import List
 
 from fastapi import APIRouter, Depends, status, HTTPException, Response
@@ -8,18 +9,21 @@ from core.deps import get_session, get_current_user
 from models import User
 from models.meliponary import Meliponary
 from schemas.meliponary_schema import MeliponaryCreateSchema, MeliponarySchema
-from utils import verify_user_exists
+from utils import verify_user_exists, process_geojson
 
 meliponary_router = APIRouter()
 
-
-@meliponary_router.post('/', response_model=MeliponaryCreateSchema, status_code=status.HTTP_201_CREATED)
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logger = logging.getLogger(__name__)
+@meliponary_router.post('/', response_model=MeliponarySchema, status_code=status.HTTP_201_CREATED)
 async def create_meliponary(
         meliponary: MeliponaryCreateSchema,
         auth_user: User = Depends(get_current_user),
         session: AsyncSession = Depends(get_session)
 ):
-    await verify_user_exists(meliponary.userId, session)
+    await verify_user_exists(auth_user.id, session)
+    suporte = await process_geojson(meliponary.latitude, meliponary.longitude, auth_user.role, meliponary.especieAbelha)
+    capacidade_de_suporte = suporte - meliponary.qtdColmeiasOutrosMeliponarios if meliponary.qtdColmeiasOutrosMeliponarios else suporte
     new_meliponary = Meliponary(name=meliponary.name,
                                 latitude=meliponary.latitude,
                                 longitude=meliponary.longitude,
@@ -35,7 +39,7 @@ async def create_meliponary(
                                 distanciaSeguraContaminacao=meliponary.distanciaSeguraContaminacao,
                                 distanciaMinimaConstrucoes=meliponary.distanciaMinimaConstrucoes,
                                 distanciaSeguraLavouras=meliponary.distanciaSeguraLavouras,
-                                capacidadeDeSuporte=meliponary.capacidadeDeSuporte,
+                                capacidadeDeSuporte=str(capacidade_de_suporte),
                                 userId=auth_user.id
                                 )
     session.add(new_meliponary)
@@ -45,10 +49,9 @@ async def create_meliponary(
 
 
 @meliponary_router.get('/', response_model=List[MeliponarySchema])
-async def get_meliponaries(session: AsyncSession = Depends(get_session), auth_user: User = Depends(get_current_user),):
-    result = await session.execute(select(Meliponary))
+async def get_meliponaries(session: AsyncSession = Depends(get_session), auth_user: User = Depends(get_current_user)):
+    result = await session.execute(select(Meliponary).filter(Meliponary.userId == auth_user.id))
     return result.scalars().all()
-
 
 @meliponary_router.get('/{id}', response_model=MeliponarySchema)
 async def get_meliponary(id: int, session: AsyncSession = Depends(get_session), auth_user: User = Depends(get_current_user),):

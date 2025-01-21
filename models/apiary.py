@@ -11,8 +11,8 @@ class Apiary(settings.DBBaseModel):
 
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     name = Column(String, nullable=False)
-    latitude = Column(Float, nullable=False)
-    longitude = Column(Float, nullable=False)
+    latitude = Column(String, nullable=False)
+    longitude = Column(String, nullable=False)
     tipoInstalacao = Column(String, nullable=False)
     tempoItinerante = Column(String, nullable=True)
     quantidadeColmeias = Column(String, nullable=False)

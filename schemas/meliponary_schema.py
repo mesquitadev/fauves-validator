@@ -10,7 +10,7 @@ class MeliponaryCreateSchema(SCBaseModel):
     especieAbelha: Optional[str]
     quantidadeColmeias: str = Field(..., description="O campo Quantidade de colmeias é obrigatório")
     outrosMeliponariosRaio1km: bool = Field(..., description="O campo Outros meliponários no raio de 1km é obrigatório")
-    qtdColmeiasOutrosMeliponarios: Optional[str]
+    qtdColmeiasOutrosMeliponarios: Optional[str] = None
     fontesNectarPolen: bool = Field(..., description="O campo Fontes de néctar e pólen é obrigatório")
     disponibilidadeAgua: bool = Field(..., description="O campo Disponibilidade de água é obrigatório")
     sombreamentoNatural: bool = Field(..., description="O campo Sombreamento natural é obrigatório")
@@ -18,10 +18,6 @@ class MeliponaryCreateSchema(SCBaseModel):
     distanciaSeguraContaminacao: bool = Field(..., description="O campo Distância segura de contaminação é obrigatório")
     distanciaMinimaConstrucoes: bool = Field(..., description="O campo Distância mínima de construções é obrigatório")
     distanciaSeguraLavouras: bool = Field(..., description="O campo Distância segura de lavouras é obrigatório")
-    capacidadeDeSuporte: Optional[str]
-    userId: int
-    createdAt: datetime
-    updatedAt: Optional[datetime]
 
     class Config:
         from_attributes = True

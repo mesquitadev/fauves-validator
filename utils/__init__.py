@@ -1,6 +1,7 @@
 import json
 import os
 import traceback
+from typing import Optional
 
 from fastapi import status, HTTPException
 from shapely.geometry import Point, shape
@@ -40,7 +41,8 @@ def calcular_capacidade_suporte_meliponicultura(hectares):
     return round(colmeias_por_hectare)
 
 
-async def process_geojson(latitude, longitude, tipo, especie=None):
+async def process_geojson(latitude: str, longitude: str, tipo: str, especie: Optional[str] = None):
+    # Function implementation
     try:
         centro = Point(float(longitude), float(latitude))
         raio_voo_dec = calcular_raio_voo(tipo, especie)
@@ -74,9 +76,9 @@ async def process_geojson(latitude, longitude, tipo, especie=None):
         pasto = calcular_capacidade_suporte_meliponicultura(areas.get('ARBOREO', 0))
 
         if tipo == 'APICULTOR':
-            return suporte_apicultura
+            return str(suporte_apicultura)
         elif tipo == 'MELIPONICULTOR':
-            return pasto
+            return str(pasto)
     except Exception as e:
         print('Erro:', str(e))
         traceback.print_exc()

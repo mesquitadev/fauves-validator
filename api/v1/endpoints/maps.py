@@ -1,83 +1,82 @@
 from typing import List
+from urllib.request import Request
 
-from fastapi import APIRouter, Depends, status, HTTPException, Response
+from fastapi import APIRouter, Depends, status, HTTPException, Response, UploadFile, File
+from fastapi.responses import JSONResponse, StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
+import os
+import shutil
+import json
 
 from core.deps import get_session, get_current_user
-from models import User
+from models import User, Maps
 from models.meliponary import Meliponary
 from schemas.meliponary_schema import MeliponaryCreateSchema, MeliponarySchema
 from utils import verify_user_exists
 
-meliponary_router = APIRouter()
+maps_router = APIRouter()
+UPLOAD_DIR = "geojson_files"
+BASE_URL = os.getenv('BASE_URL')
 
 
-@meliponary_router.post('/', response_model=MeliponaryCreateSchema, status_code=status.HTTP_201_CREATED)
-async def create_meliponary(
-        meliponary: MeliponaryCreateSchema,
-        auth_user: User = Depends(get_current_user),
-        session: AsyncSession = Depends(get_session)
-):
-    await verify_user_exists(meliponary.userId, session)
-    new_meliponary = Meliponary(name=meliponary.name,
-                                latitude=meliponary.latitude,
-                                longitude=meliponary.longitude,
-                                tipoInstalacao=meliponary.tipoInstalacao,
-                                especieAbelha=meliponary.especieAbelha,
-                                quantidadeColmeias=meliponary.quantidadeColmeias,
-                                outrosMeliponariosRaio1km=meliponary.outrosMeliponariosRaio1km,
-                                qtdColmeiasOutrosMeliponarios=meliponary.qtdColmeiasOutrosMeliponarios,
-                                fontesNectarPolen=meliponary.fontesNectarPolen,
-                                disponibilidadeAgua=meliponary.disponibilidadeAgua,
-                                sombreamentoNatural=meliponary.sombreamentoNatural,
-                                protecaoVentosFortes=meliponary.protecaoVentosFortes,
-                                distanciaSeguraContaminacao=meliponary.distanciaSeguraContaminacao,
-                                distanciaMinimaConstrucoes=meliponary.distanciaMinimaConstrucoes,
-                                distanciaSeguraLavouras=meliponary.distanciaSeguraLavouras,
-                                capacidadeDeSuporte=meliponary.capacidadeDeSuporte,
-                                userId=auth_user.id
-                                )
-    session.add(new_meliponary)
+@maps_router.post("/upload/")
+async def upload_geojson(files: List[UploadFile] = File(...), session: AsyncSession = Depends(get_session)):
+    if not os.path.exists(UPLOAD_DIR):
+        os.makedirs(UPLOAD_DIR)
+
+    file_paths = []
+    for file in files:
+        lowercase_filename = file.filename.lower()
+        file_path = os.path.join(UPLOAD_DIR, lowercase_filename)
+
+        with open(file_path, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+
+        file_paths.append(file_path)
+
+        # Save file data to the database
+        new_map = Maps(file_path=file_path, name=file.filename)
+        session.add(new_map)
+
     await session.commit()
-    await session.refresh(new_meliponary)
-    return new_meliponary
+    return JSONResponse(content={"file_paths": file_paths})
+
+@maps_router.get("/")
+async def list_geojson(session: AsyncSession = Depends(get_session)):
+    async with session.begin():
+        result = await session.execute(select(Maps))
+        maps = result.scalars().all()
+
+    file_urls = [{"id": map.id, "name": map.name, "url": f"{BASE_URL}/api/v1/maps/content/{os.path.basename(map.file_path)}"} for map in maps]
+    return JSONResponse(content=file_urls)
+
+@maps_router.get("/content/{filename}")
+async def geojson_content(filename: str):
+    file_path = os.path.join(UPLOAD_DIR, filename)
+    if not os.path.exists(file_path):
+        return JSONResponse(content={"error": "File not found"}, status_code=404)
+    with open(file_path, "r") as file:
+        content = json.load(file)
+    return JSONResponse(content=content)
 
 
-@meliponary_router.get('/', response_model=List[MeliponarySchema])
-async def get_meliponaries(session: AsyncSession = Depends(get_session), auth_user: User = Depends(get_current_user),):
-    result = await session.execute(select(Meliponary))
-    return result.scalars().all()
+@maps_router.delete("/{map_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_geojson(map_id: int, session: AsyncSession = Depends(get_session)):
+    async with session.begin():
+        result = await session.execute(select(Maps).filter(Maps.id == map_id))
+        map_entry = result.scalar()
 
+        if not map_entry:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Map not found")
 
-@meliponary_router.get('/{id}', response_model=MeliponarySchema)
-async def get_meliponary(id: int, session: AsyncSession = Depends(get_session), auth_user: User = Depends(get_current_user),):
-    result = await session.execute(select(Meliponary).filter(Meliponary.id == id))
-    meliponary = result.scalar()
-    if meliponary is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Meliponary not found')
-    return meliponary
+        # Delete the file from the file system
+        file_path = map_entry.file_path
+        if os.path.exists(file_path):
+            os.remove(file_path)
 
+        # Delete the map entry from the database
+        await session.delete(map_entry)
+        await session.commit()
 
-@meliponary_router.put('/{id}', response_model=MeliponaryCreateSchema)
-async def update_meliponary(id: int, meliponary: MeliponaryCreateSchema, session: AsyncSession = Depends(get_session), auth_user: User = Depends(get_current_user),):
-    await verify_user_exists(meliponary.userId, session)
-    result = await session.execute(select(Meliponary).filter(Meliponary.id == id))
-    meliponary_db = result.scalar()
-    if meliponary_db is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Meliponary not found')
-    meliponary_db.update(**meliponary.model_dump())
-    await session.commit()
-    await session.refresh(meliponary_db)
-    return meliponary_db
-
-
-@meliponary_router.delete('/{id}', status_code=status.HTTP_204_NO_CONTENT)
-async def delete_meliponary(id: int, session: AsyncSession = Depends(get_session), auth_user: User = Depends(get_current_user),):
-    result = await session.execute(select(Meliponary).filter(Meliponary.id == id))
-    meliponary = result.scalar_one_or_none()
-    if meliponary is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Meliponary not found')
-    session.delete(meliponary)
-    await session.commit()
     return Response(status_code=status.HTTP_204_NO_CONTENT)
