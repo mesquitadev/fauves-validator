@@ -10,8 +10,8 @@ async def seed_data():
         async with session.begin():
             # Add seed data for User
             password = generate_password_hash("12345678")
-            user1 = User(fullName="Victor", cpf="31312132", phone="asdasdasdasd", email="mesquitadev@gmail.com", password=password , role="APICULTOR")
-            user2 = User(fullName="Teste", cpf="123123123", phone="asdasdasd", email="user2@example.com", password=password, role="MELIPONICULTOR")
+            user1 = User(fullName="Demonstração Meliponário", cpf="31312132", phone="asdasdasdasd", email="meli@geobee.app", password=password , role="APICULTOR")
+            user2 = User(fullName="Demonstração Apiário", cpf="123123123", phone="asdasdasd", email="apic@geobee.app", password=password, role="MELIPONICULTOR")
             session.add_all([user1, user2])
 
             # # Add seed data for Maps
