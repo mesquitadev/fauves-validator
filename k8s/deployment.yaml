@@ -20,3 +20,6 @@ spec:
         image: geobee-maps-backend
         ports:
           - containerPort: 8000
+        env:
+          - name: DB_URL
+            value: "postgresql+asyncpg://doadmin:AVNS_uvj4yNFuuialz5-c_ju@db-cs-do-user-2961515-0.c.db.ondigitalocean.com:25060/geobee"
