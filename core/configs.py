@@ -1,15 +1,17 @@
 import os
 from typing import ClassVar
 
+from dotenv import load_dotenv
 from pydantic_settings import BaseSettings
 from sqlalchemy.ext.declarative import declarative_base
 
+load_dotenv()
 class Settings(BaseSettings):
     """
     Configuracoes gerais usadas na aplicaco
     """
     API_V1_STR: str = "/api/v1"
-    DB_URL: str = "postgresql+asyncpg://doadmin:AVNS_uvj4yNFuuialz5-c_ju@db-cs-do-user-2961515-0.c.db.ondigitalocean.com:25060/geobee"
+    DB_URL: str = os.getenv("DB_URL")
     DBBaseModel: ClassVar = declarative_base()
 
 
