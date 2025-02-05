@@ -2,10 +2,8 @@ from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from api.v1.endpoints.apiary import apiary_router
-from api.v1.endpoints.auth import auth_router
-from api.v1.endpoints.maps import maps_router
-from api.v1.endpoints.users import user_router
+from api.v1.endpoints.face import face_router
+
 load_dotenv()  # Load environment variables from .env file
 app = FastAPI()
 
@@ -18,13 +16,7 @@ app.add_middleware(
     allow_headers=["*"],  # Allow all headers
 )
 
-from api.v1.endpoints.meliponary import meliponary_router
-
-app.include_router(meliponary_router, prefix='/api/v1/meliponaries', tags=['meliponaries'])
-app.include_router(apiary_router, prefix='/api/v1/apiaries', tags=['apiaries'])
-app.include_router(user_router, prefix='/api/v1/users', tags=['users'])
-app.include_router(auth_router, prefix='/api/v1/auth', tags=['Authenticate'])
-app.include_router(maps_router, prefix='/api/v1/maps', tags=['maps'])
+app.include_router(face_router, prefix='/api/v1/face', tags=['face'])
 
 if __name__ == "__main__":
     import uvicorn

@@ -12,7 +12,7 @@ jobs:
       with:
         username: ${{ secrets.DOCKERHUB_USERNAME }}
         password: ${{ secrets.DOCKERHUB_TOKEN }}
-        repository: ${{ secrets.DOCKERHUB_USERNAME }}/gitops-maps
+        repository: ${{ secrets.DOCKERHUB_USERNAME }}/fauves-validator
         tags: ${{github.sha}}, latest
 
     - name: Setup Kustomize
@@ -25,7 +25,7 @@ jobs:
         DOCKER_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
       run: |
         cd k8s
-        kustomize edit set image geobee-maps-backend=$DOCKER_USERNAME/gitops-maps:${{github.sha}}
+        kustomize edit set image fauves-validator-backend=$DOCKER_USERNAME/fauves-validator:${{github.sha}}
 
     - name: Commit
       run: |
@@ -37,5 +37,5 @@ jobs:
       uses: ad-m/github-push-action@master
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
-        repository: 'GeoBEEAM/geomaps'
+        repository: 'mesquitadev/fauves-validator'
         branch: main

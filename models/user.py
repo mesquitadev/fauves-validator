@@ -16,17 +16,17 @@ class User(settings.DBBaseModel):
     createdAt = Column(DateTime, default=datetime.utcnow, nullable=False)
     updatedAt = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=True)
 
-    apiaries = relationship(
-        "Apiary",
-        back_populates="owner",
-        cascade="all,delete-orphan",
-        uselist=True,
-        lazy="joined"
-    )
-    meliponaries = relationship(
-        "Meliponary",
-        back_populates="owner",
-        cascade="all,delete-orphan",
-        uselist=True,
-        lazy="joined"
-    )
+    # apiaries = relationship(
+    #     "Apiary",
+    #     back_populates="owner",
+    #     cascade="all,delete-orphan",
+    #     uselist=True,
+    #     lazy="joined"
+    # )
+    # meliponaries = relationship(
+    #     "Meliponary",
+    #     back_populates="owner",
+    #     cascade="all,delete-orphan",
+    #     uselist=True,
+    #     lazy="joined"
+    # )
