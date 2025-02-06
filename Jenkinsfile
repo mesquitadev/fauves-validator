@@ -17,7 +17,7 @@ pipeline {
             steps {
                 script {
                     def commitHash = sh(script: 'git rev-parse --short HEAD', returnStdout: true).trim()
-                    def version = sh(script: 'git describe --tags --abbrev=0', returnStdout: true).trim()
+                    def version = sh(script: 'git describe --tags --abbrev=0 || echo "0.0.0"', returnStdout: true).trim()
                     def tag = "${version}-${commitHash}"
 
                     sh "docker build -t ${env.DOCKERHUB_REPO}:${tag} ."
