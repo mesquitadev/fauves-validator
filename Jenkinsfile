@@ -45,9 +45,7 @@ pipeline {
 
     post {
         always {
-            node('docker') {
-                cleanWs()
-            }
+            cleanWs()
         }
     }
 }
